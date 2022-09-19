@@ -148,14 +148,17 @@ public class ExecutorController extends BaseController {
                                        @RequestParam(value = "complementDependentMode", required = false) ComplementDependentMode complementDependentMode) {
 
         if (timeout == null) {
+            // 设置默认的超时时间
             timeout = Constants.MAX_TASK_TIMEOUT;
         }
         Map<String, String> startParamMap = null;
         if (startParams != null) {
+            // 解析输入的启动参数
             startParamMap = JSONUtils.toMap(startParams);
         }
 
         if (complementDependentMode == null) {
+            // 默认关闭
             complementDependentMode = ComplementDependentMode.OFF_MODE;
         }
 
@@ -163,6 +166,7 @@ public class ExecutorController extends BaseController {
                 scheduleTime, execType, failureStrategy,
                 startNodeList, taskDependType, warningType, warningGroupId, runMode, processInstancePriority,
                 workerGroup, environmentCode, timeout, startParamMap, expectedParallelismNumber, dryRun, complementDependentMode);
+        // 构造响应语句
         return returnDataList(result);
     }
 

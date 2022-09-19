@@ -292,6 +292,7 @@ public class JSONUtils {
         }
 
         try {
+            // 把json解析成type所引用的类型
             return objectMapper.readValue(json, type);
         } catch (Exception e) {
             logger.error("json to map exception!", e);
