@@ -17,17 +17,15 @@
 
 package org.apache.dolphinscheduler.common;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.SystemUtils;
 import org.apache.dolphinscheduler.common.enums.WorkflowExecutionStatus;
 import org.apache.dolphinscheduler.plugin.task.api.enums.TaskExecutionStatus;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.SystemUtils;
 
 import java.time.Duration;
 import java.util.regex.Pattern;
 
-/**
- * Constants
- */
 public final class Constants {
 
     private Constants() {
@@ -44,13 +42,9 @@ public final class Constants {
      */
     public static final String REGISTRY_DOLPHINSCHEDULER_MASTERS = "/nodes/master";
     public static final String REGISTRY_DOLPHINSCHEDULER_WORKERS = "/nodes/worker";
-    public static final String REGISTRY_DOLPHINSCHEDULER_DEAD_SERVERS = "/dead-servers";
     public static final String REGISTRY_DOLPHINSCHEDULER_NODE = "/nodes";
     public static final String REGISTRY_DOLPHINSCHEDULER_LOCK_MASTERS = "/lock/masters";
     public static final String REGISTRY_DOLPHINSCHEDULER_LOCK_FAILOVER_MASTERS = "/lock/failover/masters";
-    public static final String REGISTRY_DOLPHINSCHEDULER_LOCK_FAILOVER_WORKERS = "/lock/failover/workers";
-    public static final String REGISTRY_DOLPHINSCHEDULER_LOCK_FAILOVER_STARTUP_MASTERS =
-            "/lock/failover/startup-masters";
 
     public static final String FORMAT_SS = "%s%s";
     public static final String FORMAT_S_S = "%s/%s";
@@ -71,6 +65,11 @@ public final class Constants {
      * resource.hdfs.fs.defaultFS
      */
     public static final String FS_DEFAULT_FS = "resource.hdfs.fs.defaultFS";
+
+    /**
+     * hdfs defaultFS property name. Should be consistent with the property name in hdfs-site.xml
+     */
+    public static final String HDFS_DEFAULT_FS = "fs.defaultFS";
 
     /**
      * hadoop configuration
@@ -639,20 +638,20 @@ public final class Constants {
     public static final String TASK_LOG_INFO_FORMAT = "TaskLogInfo-%s";
 
     public static final int[] NOT_TERMINATED_STATES = new int[]{
-            WorkflowExecutionStatus.SUBMITTED_SUCCESS.ordinal(),
-            TaskExecutionStatus.DISPATCH.ordinal(),
-            WorkflowExecutionStatus.RUNNING_EXECUTION.ordinal(),
-            WorkflowExecutionStatus.DELAY_EXECUTION.ordinal(),
-            WorkflowExecutionStatus.READY_PAUSE.ordinal(),
-            WorkflowExecutionStatus.READY_STOP.ordinal(),
-            TaskExecutionStatus.NEED_FAULT_TOLERANCE.ordinal(),
+            WorkflowExecutionStatus.SUBMITTED_SUCCESS.getCode(),
+            TaskExecutionStatus.DISPATCH.getCode(),
+            WorkflowExecutionStatus.RUNNING_EXECUTION.getCode(),
+            WorkflowExecutionStatus.DELAY_EXECUTION.getCode(),
+            WorkflowExecutionStatus.READY_PAUSE.getCode(),
+            WorkflowExecutionStatus.READY_STOP.getCode(),
+            TaskExecutionStatus.NEED_FAULT_TOLERANCE.getCode(),
     };
 
     public static final int[] RUNNING_PROCESS_STATE = new int[]{
-            TaskExecutionStatus.RUNNING_EXECUTION.ordinal(),
-            TaskExecutionStatus.SUBMITTED_SUCCESS.ordinal(),
-            TaskExecutionStatus.DISPATCH.ordinal(),
-            WorkflowExecutionStatus.SERIAL_WAIT.ordinal()
+            TaskExecutionStatus.RUNNING_EXECUTION.getCode(),
+            TaskExecutionStatus.SUBMITTED_SUCCESS.getCode(),
+            TaskExecutionStatus.DISPATCH.getCode(),
+            WorkflowExecutionStatus.SERIAL_WAIT.getCode()
     };
 
     /**
@@ -735,7 +734,7 @@ public final class Constants {
      * dataSource sensitive param
      */
     public static final String DATASOURCE_PASSWORD_REGEX =
-            "(?<=((?i)password((\\\\\":\\\\\")|(=')))).*?(?=((\\\\\")|(')))";
+            "(?<=((?i)password((\":\")|(=')))).*?(?=((\")|(')))";
 
     /**
      * default worker group
@@ -852,4 +851,23 @@ public final class Constants {
     public static final String SECURITY_CONFIG_TYPE_PASSWORD = "PASSWORD";
 
     public static final String SECURITY_CONFIG_TYPE_LDAP = "LDAP";
+
+    /**
+     * test flag
+     */
+    public static final int TEST_FLAG_NO = 0;
+    public static final int TEST_FLAG_YES = 1;
+
+    /**
+     * Task Types
+     */
+    public static final String TYPE_UNIVERSAL = "Universal";
+    public static final String TYPE_DATA_INTEGRATION = "DataIntegration";
+    public static final String TYPE_CLOUD = "Cloud";
+    public static final String TYPE_LOGIC = "Logic";
+    public static final String TYPE_DATA_QUALITY = "DataQuality";
+    public static final String TYPE_OTHER = "Other";
+    public static final String TYPE_MACHINE_LEARNING = "MachineLearning";
+
+    public static final String DATASOUCE = "datasource";
 }

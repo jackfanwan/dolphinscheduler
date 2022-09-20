@@ -50,6 +50,7 @@ import org.apache.dolphinscheduler.dao.entity.Resource;
 import org.apache.dolphinscheduler.dao.entity.TaskInstance;
 import org.apache.dolphinscheduler.dao.entity.Tenant;
 import org.apache.dolphinscheduler.dao.entity.UdfFunc;
+import org.apache.dolphinscheduler.dao.repository.ProcessInstanceDao;
 import org.apache.dolphinscheduler.plugin.task.api.DataQualityTaskExecutionContext;
 import org.apache.dolphinscheduler.plugin.task.api.K8sTaskExecutionContext;
 import org.apache.dolphinscheduler.plugin.task.api.TaskChannel;
@@ -62,15 +63,15 @@ import org.apache.dolphinscheduler.plugin.task.api.model.JdbcInfo;
 import org.apache.dolphinscheduler.plugin.task.api.model.Property;
 import org.apache.dolphinscheduler.plugin.task.api.model.ResourceInfo;
 import org.apache.dolphinscheduler.plugin.task.api.parameters.AbstractParameters;
+import org.apache.dolphinscheduler.plugin.task.api.parameters.K8sTaskParameters;
 import org.apache.dolphinscheduler.plugin.task.api.parameters.ParametersNode;
+import org.apache.dolphinscheduler.plugin.task.api.parameters.dataquality.DataQualityParameters;
 import org.apache.dolphinscheduler.plugin.task.api.parameters.resource.AbstractResourceParameters;
 import org.apache.dolphinscheduler.plugin.task.api.parameters.resource.DataSourceParameters;
 import org.apache.dolphinscheduler.plugin.task.api.parameters.resource.ResourceParametersHelper;
 import org.apache.dolphinscheduler.plugin.task.api.parameters.resource.UdfFuncParameters;
 import org.apache.dolphinscheduler.plugin.task.api.utils.JdbcUrlParser;
 import org.apache.dolphinscheduler.plugin.task.api.utils.MapUtils;
-import org.apache.dolphinscheduler.plugin.task.dq.DataQualityParameters;
-import org.apache.dolphinscheduler.plugin.task.k8s.K8sTaskParameters;
 import org.apache.dolphinscheduler.server.master.builder.TaskExecutionContextBuilder;
 import org.apache.dolphinscheduler.server.master.config.MasterConfig;
 import org.apache.dolphinscheduler.service.bean.SpringApplicationContext;
@@ -79,6 +80,7 @@ import org.apache.dolphinscheduler.service.process.ProcessService;
 import org.apache.dolphinscheduler.service.task.TaskPluginManager;
 import org.apache.dolphinscheduler.spi.enums.DbType;
 import org.apache.dolphinscheduler.spi.enums.ResourceType;
+import org.apache.dolphinscheduler.spi.plugin.SPIIdentify;
 import org.apache.dolphinscheduler.spi.utils.StringUtils;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -93,12 +95,12 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import lombok.NonNull;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.zaxxer.hikari.HikariDataSource;
-
-import lombok.NonNull;
 
 public abstract class BaseTaskProcessor implements ITaskProcessor {
 
@@ -121,6 +123,8 @@ public abstract class BaseTaskProcessor implements ITaskProcessor {
 
     protected ProcessService processService;
 
+    protected ProcessInstanceDao processInstanceDao;
+
     protected MasterConfig masterConfig;
 
     protected TaskPluginManager taskPluginManager;
@@ -132,6 +136,7 @@ public abstract class BaseTaskProcessor implements ITaskProcessor {
     @Override
     public void init(@NonNull TaskInstance taskInstance, @NonNull ProcessInstance processInstance) {
         processService = SpringApplicationContext.getBean(ProcessService.class);
+        processInstanceDao = SpringApplicationContext.getBean(ProcessInstanceDao.class);
         masterConfig = SpringApplicationContext.getBean(MasterConfig.class);
         taskPluginManager = SpringApplicationContext.getBean(TaskPluginManager.class);
         curingParamsService = SpringApplicationContext.getBean(CuringParamsService.class);
@@ -185,27 +190,39 @@ public abstract class BaseTaskProcessor implements ITaskProcessor {
         if (StringUtils.isNotEmpty(threadLoggerInfoName)) {
             Thread.currentThread().setName(threadLoggerInfoName);
         }
-        switch (taskAction) {
-            case STOP:
-                return stop();
-            case PAUSE:
-                return pause();
-            case TIMEOUT:
-                return timeout();
-            case SUBMIT:
-                return submit();
-            case RUN:
-                return run();
-            case DISPATCH:
-                return dispatch();
-            case RESUBMIT:
-                return resubmit();
-            default:
-                logger.error("unknown task action: {}", taskAction);
+        boolean result = false;
+        try {
+            switch (taskAction) {
+                case STOP:
+                    result = stop();
+                    break;
+                case PAUSE:
+                    result = pause();
+                    break;
+                case TIMEOUT:
+                    result = timeout();
+                    break;
+                case SUBMIT:
+                    result = submit();
+                    break;
+                case RUN:
+                    result = run();
+                    break;
+                case DISPATCH:
+                    result = dispatch();
+                    break;
+                case RESUBMIT:
+                    result = resubmit();
+                    break;
+                default:
+                    logger.error("unknown task action: {}", taskAction);
+            }
+            return result;
+        } finally {
+            // reset thread name
+            Thread.currentThread().setName(threadName);
+
         }
-        // reset thread name
-        Thread.currentThread().setName(threadName);
-        return false;
     }
 
     protected boolean resubmit() {
@@ -251,6 +268,11 @@ public abstract class BaseTaskProcessor implements ITaskProcessor {
     @Override
     public String getType() {
         throw new UnsupportedOperationException("This abstract class doesn's has type");
+    }
+
+    @Override
+    public SPIIdentify getIdentify() {
+        return SPIIdentify.builder().name(getType()).build();
     }
 
     @Override
@@ -467,7 +489,7 @@ public abstract class BaseTaskProcessor implements ITaskProcessor {
                     dqRuleExecuteSql.setTableAlias(type.getOutputTable());
                     executeSqlList.add(0, dqRuleExecuteSql);
 
-                    if (Boolean.TRUE.equals(type.getInnerSource())) {
+                    if (Boolean.TRUE.equals(type.getIsInnerSource())) {
                         dataQualityTaskExecutionContext.setComparisonNeedStatisticsValueTable(true);
                     }
                 }
@@ -602,7 +624,7 @@ public abstract class BaseTaskProcessor implements ITaskProcessor {
 
                 // filter the resources that the resource id equals 0
                 Set<ResourceInfo> oldVersionResources =
-                        projectResourceFiles.stream().filter(t -> t.getId() == 0).collect(Collectors.toSet());
+                        projectResourceFiles.stream().filter(t -> t.getId() == null).collect(Collectors.toSet());
                 if (CollectionUtils.isNotEmpty(oldVersionResources)) {
                     oldVersionResources.forEach(t -> resourcesMap.put(t.getRes(),
                             processService.queryTenantCodeByResName(t.getRes(), ResourceType.FILE)));
